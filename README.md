@@ -10,14 +10,18 @@ A sophisticated Vision Language Model (VLM) detector that combines natural langu
 - **📸 Image Processing**: Advanced image processing and visualization capabilities
 - **🎨 Visual Output**: Automatic bounding box drawing with confidence scores
 - **🔄 Smart Class Mapping**: Intelligent mapping between Turkish queries and English COCO classes
+- **🌈 Custom Colors**: Support for custom bounding box colors based on Turkish color names
+- **🎯 Color Filtering**: Intelligent color-based object filtering (e.g., "beyaz kedileri göster" - show only white cats)
 
 ## 🚀 How It Works
 
-1. **Input Processing**: Takes a Turkish natural language query (e.g., "arabaları göster" - show cars)
-2. **LLM Analysis**: Uses Llama 3.1 to map Turkish terms to COCO class names
-3. **Object Detection**: YOLOv8 detects all objects in the image
-4. **Filtering**: Filters detections based on the LLM's class mapping
-5. **Visualization**: Draws bounding boxes around matching objects with confidence scores
+1. **Input Processing**: Takes a Turkish natural language query (e.g., "mavi arabaları göster" - show blue cars)
+2. **Color Detection**: Extracts color preferences from the query
+3. **LLM Analysis**: Uses Llama 3.1 to map Turkish terms to COCO class names
+4. **Object Detection**: YOLOv8 detects all objects in the image
+5. **Class Filtering**: Filters detections based on the LLM's class mapping
+6. **Color Filtering**: If color specified, filters objects by actual color analysis
+7. **Visualization**: Draws bounding boxes around matching objects with custom colors and confidence scores
 
 ## 📋 Prerequisites
 
@@ -53,7 +57,47 @@ python main.py
 
 ## 💻 Usage
 
-### Basic Usage
+### 🖥️ GUI Interface (Recommended)
+
+For the best user experience, use the modern GUI interface:
+
+```bash
+python gui.py
+```
+
+**GUI Features:**
+
+- **📸 Dual Panel Display**: Original image on the left, detection results on the right
+- **📁 Easy File Selection**: Browse button for image selection
+- **💬 Smart Prompt Input**: Long text field with example prompts
+- **🎨 Real-time Visualization**: Instant display of detection results
+- **💾 Save Results**: Save detection results as images
+- **🔄 Modern Interface**: Clean, responsive design
+
+#### GUI Screenshot
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    🎯 English-Turkish VLM Detector             │
+├─────────────────────────┬───────────────────────────────────────┤
+│  📸 Original Image      │  🎨 Detection Result                 │
+│  ┌─────────────────┐   │  ┌─────────────────────────────────┐ │
+│  │                 │   │  │                                 │ │
+│  │   [Your Image]  │   │  │    [Detection Results]         │ │
+│  │                 │   │  │                                 │ │
+│  └─────────────────┘   │  └─────────────────────────────────┘ │
+├─────────────────────────┴───────────────────────────────────────┤
+│ 📁 Image File: [Browse] [car1.webp                    ]        │
+│ 💬 Detection Prompt: [mavi arabaları göster           ]        │
+│ 💡 Examples: [mavi arabaları göster] [kırmızı kedileri bul]... │
+│ 🔍 Detect Objects  🗑️ Clear  💾 Save Result                   │
+│ Status: Ready - Select an image and enter a prompt             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 🖥️ Command Line Interface
+
+For command-line usage:
 
 ```bash
 python main.py
@@ -62,13 +106,13 @@ python main.py
 When prompted:
 
 1. Enter the path to your image file
-2. Enter your query in Turkish (e.g., "arabaları göster", "kedileri bul")
+2. Enter your query in Turkish (e.g., "mavi arabaları göster", "kırmızı kedileri bul")
 
 ### Example Session
 
 ```
 Görüntü dosyasının yolunu girin: car1.webp
-Ne aramak istiyorsunuz? (örn: 'arabaları göster', 'kedileri bul'): arabaları göster
+Ne aramak istiyorsunuz? (örn: 'mavi arabaları göster', 'kırmızı kedileri bul'): mavi arabaları göster
 ```
 
 ## 🎯 Supported Object Categories
@@ -109,11 +153,47 @@ The system supports all 80 COCO dataset classes with intelligent Turkish-to-Engl
 
 - **Turkish**: "insan", "kişi", "adam", "kadın", "çocuk" → **English**: person
 
+## 🌈 Supported Colors
+
+The system supports custom bounding box colors with Turkish color names:
+
+### Basic Colors
+
+- **kırmızı** (red) - `(0, 0, 255)`
+- **mavi** (blue) - `(255, 0, 0)`
+- **yeşil** (green) - `(0, 255, 0)`
+- **sarı** (yellow) - `(0, 255, 255)`
+- **mor** (purple) - `(255, 0, 255)`
+- **turuncu** (orange) - `(0, 165, 255)`
+- **pembe** (pink) - `(203, 192, 255)`
+- **siyah** (black) - `(0, 0, 0)`
+- **beyaz** (white) - `(255, 255, 255)`
+- **gri** (gray) - `(128, 128, 128)`
+
+### Advanced Colors
+
+- **kahverengi** (brown) - `(42, 42, 165)`
+- **lacivert** (navy blue) - `(139, 0, 0)`
+- **altın** (gold) - `(0, 215, 255)`
+- **gümüş** (silver) - `(192, 192, 192)`
+- **cyan** - `(255, 255, 0)`
+- **magenta** - `(255, 0, 255)`
+
+### Color Usage Examples
+
+- "mavi arabaları göster" - Show only blue cars
+- "kırmızı kedileri bul" - Find only red cats
+- "yeşil sandalyeleri tespit et" - Detect only green chairs
+- "sarı meyveleri göster" - Show only yellow fruits
+- "beyaz kedileri göster" - Show only white cats
+- "arabaları göster" - Show all cars (no color filtering)
+
 ## 📁 Project Structure
 
 ```
 English-Turkish-VLM-Detector/
-├── main.py                 # Main application file
+├── main.py                 # Command-line application
+├── gui.py                  # Modern GUI application
 ├── requirements.txt        # Python dependencies
 ├── README.md              # Project documentation
 ├── yolov8n.pt            # YOLOv8 model weights (auto-downloaded)
@@ -154,11 +234,13 @@ The system generates:
 
 ```
 Görüntü işleniyor: car1.webp
-Kullanıcı sorgusu: arabaları göster
+Kullanıcı sorgusu: mavi arabaları göster
+Tespit edilen renk: mavi
 LLM sınıf eşleştirmesi: car
 Parse edilen sınıflar: ['car']
 Tespit edilen nesneler: ['car', 'car']
 Sonuç görüntüsü kaydedildi: output_detection.jpg
+Bounding box rengi: mavi
 ```
 
 ## 🚀 Advanced Features

@@ -12,6 +12,33 @@ class VLMDetector:
         self.model = YOLO('yolov8n.pt')
         
         self.class_names = self.model.names
+        
+        # Renk eşleştirmesi - Türkçe renk isimlerini RGB değerlerine çevirir
+        self.color_mapping = {
+            'kırmızı': (0, 0, 255),      # BGR formatında
+            'kirmizi': (0, 0, 255),
+            'kırmızı': (0, 0, 255),
+            'mavi': (255, 0, 0),
+            'yeşil': (0, 255, 0),
+            'yesil': (0, 255, 0),
+            'sarı': (0, 255, 255),
+            'sari': (0, 255, 255),
+            'mor': (255, 0, 255),
+            'turuncu': (0, 165, 255),
+            'pembe': (203, 192, 255),
+            'siyah': (0, 0, 0),
+            'beyaz': (255, 255, 255),
+            'gri': (128, 128, 128),
+            'kahverengi': (42, 42, 165),
+            'cyan': (255, 255, 0),
+            'magenta': (255, 0, 255),
+            'lacivert': (139, 0, 0),
+            'altın': (0, 215, 255),
+            'altin': (0, 215, 255),
+            'gümüş': (192, 192, 192),
+            'gumus': (192, 192, 192),
+            'default': (0, 255, 0)  # Varsayılan yeşil
+        }
     
     def detect_objects(self, image_path):
         results = self.model(image_path)
@@ -24,12 +51,23 @@ class VLMDetector:
         
         available_classes = list(self.class_names.values())
         
+        # Renk bilgisini çıkar
+        detected_color = self.extract_color_from_query(target_class)
+        color_name = [name for name, value in self.color_mapping.items() if value == detected_color and name != 'default'][0]
+        
+        # Renk bilgisini target_class'dan çıkar
+        clean_target = target_class.lower()
+        for color in self.color_mapping.keys():
+            if color != 'default' and color in clean_target:
+                clean_target = clean_target.replace(color, '').strip()
+                break
+        
         llm_prompt = f"""
         Kullanıcı "{target_class}" nesnesini arıyor.
         
         Mevcut COCO sınıfları: {', '.join(available_classes)}
         
-        Bu sınıflardan hangileri "{target_class}" ile eşleşiyor? 
+        Bu sınıflardan hangileri "{clean_target}" ile eşleşiyor? 
         
         Önemli: Türkçe kelimeleri İngilizce COCO sınıflarıyla eşleştir. Aynı anlama gelen farklı kelimeleri de düşün:
         
@@ -128,17 +166,99 @@ class VLMDetector:
         
         return filtered_boxes, filtered_confidences, filtered_classes
     
-    def draw_detections(self, image_path, boxes, confidences, classes, output_path):
+    def filter_objects_by_color(self, image_path, boxes, confidences, classes, target_color):
+        """Renk bazında nesne filtreleme"""
+        if target_color == self.color_mapping['default']:
+            return boxes, confidences, classes
+        
+        try:
+            # Görüntüyü yükle
+            image = cv2.imread(image_path)
+            if image is None:
+                return boxes, confidences, classes
+            
+            filtered_boxes = []
+            filtered_confidences = []
+            filtered_classes = []
+            
+            for i, (box, conf, cls) in enumerate(zip(boxes, confidences, classes)):
+                x1, y1, x2, y2 = map(int, box)
+                
+                # Bounding box içindeki alanı al
+                roi = image[y1:y2, x1:x2]
+                if roi.size == 0:
+                    continue
+                
+                # Renk analizi yap
+                if self.is_object_color_match(roi, target_color):
+                    filtered_boxes.append(box)
+                    filtered_confidences.append(conf)
+                    filtered_classes.append(cls)
+            
+            return filtered_boxes, filtered_confidences, filtered_classes
+            
+        except Exception as e:
+            print(f"Renk filtreleme hatası: {e}")
+            return boxes, confidences, classes
+    
+    def is_object_color_match(self, roi, target_color):
+        """Nesnenin renginin hedef renkle eşleşip eşleşmediğini kontrol et"""
+        try:
+            # ROI'yi BGR'den RGB'ye çevir
+            rgb_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+            
+            # Hedef rengi BGR'den RGB'ye çevir
+            target_rgb = target_color[::-1]  # BGR'den RGB'ye çevir
+            
+            # Renk mesafesi hesapla
+            color_diff = np.sqrt(np.sum((rgb_roi - target_rgb) ** 2, axis=2))
+            
+            # Ortalama renk mesafesi
+            avg_color_diff = np.mean(color_diff)
+            
+            # Renk eşleşme eşiği (0-255 arasında) - daha esnek
+            color_threshold = 200
+            
+            # Eğer ortalama renk mesafesi eşikten küçükse eşleşme kabul et
+            is_match = avg_color_diff < color_threshold
+            
+            print(f"Renk analizi: Hedef={target_rgb}, Ortalama mesafe={avg_color_diff:.1f}, Eşleşme={is_match}")
+            
+            return is_match
+            
+        except Exception as e:
+            print(f"Renk eşleştirme hatası: {e}")
+            return True  # Hata durumunda tüm nesneleri kabul et
+    
+    def extract_color_from_query(self, user_query):
+        """Kullanıcı sorgusundan renk bilgisini çıkarır"""
+        user_query_lower = user_query.lower()
+        
+        # Renk anahtar kelimelerini ara
+        for color_name, color_value in self.color_mapping.items():
+            if color_name in user_query_lower and color_name != 'default':
+                return color_value
+        
+        # Eğer hiç renk bulunamazsa varsayılan yeşil döndür
+        return self.color_mapping['default']
+    
+    def draw_detections(self, image_path, boxes, confidences, classes, output_path, color=None):
         image = cv2.imread(image_path)
+        
+        # Renk belirlenmemişse varsayılan yeşil kullan
+        if color is None:
+            color = self.color_mapping['default']
         
         for i, (box, conf, cls) in enumerate(zip(boxes, confidences, classes)):
             x1, y1, x2, y2 = map(int, box)
             
-            cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            # Belirtilen renkte bounding box çiz
+            cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
             
             label = f"{cls}: {conf:.2f}"
+            # Label'ı da aynı renkte yaz
             cv2.putText(image, label, (x1, y1 - 10), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                       cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
         
         cv2.imwrite(output_path, image)
         return image
@@ -159,15 +279,27 @@ class VLMDetector:
         print(f"Görüntü işleniyor: {image_path}")
         print(f"Kullanıcı sorgusu: {user_query}")
         
+        # Kullanıcı sorgusundan renk bilgisini çıkar
+        detected_color = self.extract_color_from_query(user_query)
+        color_name = [name for name, value in self.color_mapping.items() if value == detected_color and name != 'default'][0]
+        print(f"Tespit edilen renk: {color_name}")
+        
         results = self.detect_objects(image_path)
         
+        # Önce sınıf bazında filtrele
         boxes, confidences, classes = self.filter_objects_by_class(results, user_query)
+        
+        # Sonra renk bazında filtrele (eğer renk belirtilmişse)
+        if detected_color != self.color_mapping['default']:
+            print(f"Renk filtreleme uygulanıyor: {color_name}")
+            boxes, confidences, classes = self.filter_objects_by_color(image_path, boxes, confidences, classes, detected_color)
         
         output_path = "output_detection.jpg"
         if boxes:
-            self.draw_detections(image_path, boxes, confidences, classes, output_path)
+            self.draw_detections(image_path, boxes, confidences, classes, output_path, detected_color)
             print(f"Tespit edilen nesneler: {classes}")
             print(f"Sonuç görüntüsü kaydedildi: {output_path}")
+            print(f"Bounding box rengi: {color_name}")
         else:
             print("Belirtilen nesneler bulunamadı.")
         
@@ -177,7 +309,7 @@ def main():
     detector = VLMDetector()
     
     image_path = input("Görüntü dosyasının yolunu girin: ")
-    user_query = input("Ne aramak istiyorsunuz? (örn: 'arabaları göster', 'kedileri bul'): ")
+    user_query = input("Ne aramak istiyorsunuz? (örn: 'mavi arabaları göster', 'kırmızı kedileri bul'): ")
     
     detector.process_image(image_path, user_query)
 
