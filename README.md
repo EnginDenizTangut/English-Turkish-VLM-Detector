@@ -8,10 +8,13 @@ A sophisticated Vision Language Model (VLM) detector that combines natural langu
 - **🎯 YOLOv8 Object Detection**: State-of-the-art object detection with 80 COCO classes
 - **🇹🇷 Turkish Language Support**: Native Turkish language query processing
 - **📸 Image Processing**: Advanced image processing and visualization capabilities
+- **🎥 Video Processing**: Full video support with frame-by-frame detection
+- **📹 Real-time Webcam**: Live webcam detection and recording
 - **🎨 Visual Output**: Automatic bounding box drawing with confidence scores
 - **🔄 Smart Class Mapping**: Intelligent mapping between Turkish queries and English COCO classes
 - **🌈 Custom Colors**: Support for custom bounding box colors based on Turkish color names
 - **🎯 Color Filtering**: Intelligent color-based object filtering (e.g., "beyaz kedileri göster" - show only white cats)
+- **⚡ Performance Options**: Frame skipping and processing limits for optimal performance
 
 ## 🚀 How It Works
 
@@ -68,10 +71,13 @@ python gui.py
 **GUI Features:**
 
 - **📸 Dual Panel Display**: Original image on the left, detection results on the right
-- **📁 Easy File Selection**: Browse button for image selection
+- **📁 Easy File Selection**: Browse button for image/video selection
+- **🎥 Video Support**: Full video processing with preview and options
+- **📹 Webcam Integration**: Real-time webcam detection and recording
 - **💬 Smart Prompt Input**: Long text field with example prompts
 - **🎨 Real-time Visualization**: Instant display of detection results
-- **💾 Save Results**: Save detection results as images
+- **💾 Save Results**: Save detection results as images or videos
+- **⚙️ Advanced Options**: Frame skipping, processing limits, and duration controls
 - **🔄 Modern Interface**: Clean, responsive design
 
 #### GUI Screenshot
@@ -105,8 +111,23 @@ python main.py
 
 When prompted:
 
-1. Enter the path to your image file
-2. Enter your query in Turkish (e.g., "mavi arabaları göster", "kırmızı kedileri bul")
+1. Choose processing mode (Image/Video/Webcam)
+2. Enter the path to your file (for image/video) or configure webcam settings
+3. Enter your query in Turkish (e.g., "mavi arabaları göster", "kırmızı kedileri bul")
+
+### 🎥 Video Demo
+
+Try the video demo to see the system in action:
+
+```bash
+python video_demo.py
+```
+
+This will:
+
+1. Create a demo video with various colored objects
+2. Process the video with different Turkish queries
+3. Show the detection results
 
 ### Example Session
 
@@ -192,15 +213,20 @@ The system supports custom bounding box colors with Turkish color names:
 
 ```
 English-Turkish-VLM-Detector/
-├── main.py                 # Command-line application
-├── gui.py                  # Modern GUI application
+├── main.py                 # Command-line application with video support
+├── gui.py                  # Modern GUI application with video/webcam support
+├── video_demo.py          # Video demonstration script
 ├── requirements.txt        # Python dependencies
 ├── README.md              # Project documentation
 ├── yolov8n.pt            # YOLOv8 model weights (auto-downloaded)
+├── yolov8n-seg.pt        # YOLOv8 segmentation model weights
 ├── car1.webp             # Sample image
 ├── chairs.jpg            # Sample image
 ├── traffic.webp          # Sample image
-└── output_detection.jpg  # Output image with detections
+├── demo_video.mp4        # Demo video (created by video_demo.py)
+├── video_output/         # Video processing output directory
+├── output_detection.jpg  # Output image with detections
+└── output_segmentation.jpg # Output image with segmentation
 ```
 
 ## 🔧 Technical Details
@@ -208,10 +234,12 @@ English-Turkish-VLM-Detector/
 ### Core Components
 
 1. **VLMDetector Class**: Main detector class that handles the entire pipeline
-2. **Object Detection**: Uses YOLOv8 for fast and accurate object detection
-3. **LLM Integration**: Ollama API integration for natural language processing
-4. **Class Mapping**: Intelligent mapping system for Turkish-English class translation
-5. **Visualization**: OpenCV-based bounding box drawing and labeling
+2. **VideoProcessor Class**: Handles video processing, webcam, and frame-by-frame detection
+3. **Object Detection**: Uses YOLOv8 for fast and accurate object detection
+4. **LLM Integration**: Ollama API integration for natural language processing
+5. **Class Mapping**: Intelligent mapping system for Turkish-English class translation
+6. **Visualization**: OpenCV-based bounding box drawing and labeling
+7. **Video Processing**: Frame extraction, processing, and annotated video creation
 
 ### Dependencies
 
@@ -297,10 +325,40 @@ If you encounter any issues:
 3. Test with a simple image and query
 4. Check the console output for error messages
 
+## 🎥 Video Processing Features
+
+### Supported Video Formats
+
+- **MP4** (.mp4)
+- **AVI** (.avi)
+- **MOV** (.mov)
+- **MKV** (.mkv)
+- **WebM** (.webm)
+- **FLV** (.flv)
+
+### Video Processing Options
+
+- **Frame Skipping**: Process every Nth frame for performance
+- **Max Frames**: Limit processing to specific number of frames
+- **Output Quality**: High-quality annotated video output
+- **Progress Tracking**: Real-time processing progress
+- **Summary Reports**: JSON reports with detection statistics
+
+### Webcam Features
+
+- **Real-time Detection**: Live object detection from webcam
+- **Duration Control**: Set recording duration or unlimited
+- **Performance Optimization**: Process every 5th frame for smooth performance
+- **Live Preview**: See detection results in real-time
+- **Video Recording**: Save webcam sessions with annotations
+
 ## 🔮 Future Enhancements
 
-- Support for video processing
-- Real-time webcam detection
-- Additional language support
-- Custom model training capabilities
-- Web interface development
+- **Batch Video Processing**: Process multiple videos simultaneously
+- **Advanced Video Filters**: Motion detection, object tracking
+- **Cloud Integration**: Upload videos to cloud storage
+- **Additional Language Support**: More languages beyond Turkish
+- **Custom Model Training**: Train models on specific datasets
+- **Web Interface**: Browser-based video processing
+- **Mobile App**: iOS/Android applications
+- **API Server**: RESTful API for video processing
